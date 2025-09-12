@@ -14,7 +14,222 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analysis_sessions: {
+        Row: {
+          analysis_parameters: Json | null
+          bots_detected: number | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          session_name: string
+          started_at: string
+          status: string | null
+          subreddit: string | null
+          total_accounts_analyzed: number | null
+        }
+        Insert: {
+          analysis_parameters?: Json | null
+          bots_detected?: number | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          session_name: string
+          started_at?: string
+          status?: string | null
+          subreddit?: string | null
+          total_accounts_analyzed?: number | null
+        }
+        Update: {
+          analysis_parameters?: Json | null
+          bots_detected?: number | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          session_name?: string
+          started_at?: string
+          status?: string | null
+          subreddit?: string | null
+          total_accounts_analyzed?: number | null
+        }
+        Relationships: []
+      }
+      bot_detection_results: {
+        Row: {
+          analysis_timestamp: string
+          bot_probability: number
+          confidence_score: number
+          created_at: string
+          detection_method: string
+          features_analyzed: Json | null
+          id: string
+          risk_factors: Json | null
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          analysis_timestamp?: string
+          bot_probability: number
+          confidence_score: number
+          created_at?: string
+          detection_method: string
+          features_analyzed?: Json | null
+          id?: string
+          risk_factors?: Json | null
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          analysis_timestamp?: string
+          bot_probability?: number
+          confidence_score?: number
+          created_at?: string
+          detection_method?: string
+          features_analyzed?: Json | null
+          id?: string
+          risk_factors?: Json | null
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      reddit_accounts: {
+        Row: {
+          account_age_days: number | null
+          account_created_utc: number | null
+          comment_karma: number | null
+          created_at: string
+          has_verified_email: boolean | null
+          id: string
+          is_premium: boolean | null
+          is_verified: boolean | null
+          link_karma: number | null
+          subreddit_activity: Json | null
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          account_age_days?: number | null
+          account_created_utc?: number | null
+          comment_karma?: number | null
+          created_at?: string
+          has_verified_email?: boolean | null
+          id?: string
+          is_premium?: boolean | null
+          is_verified?: boolean | null
+          link_karma?: number | null
+          subreddit_activity?: Json | null
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          account_age_days?: number | null
+          account_created_utc?: number | null
+          comment_karma?: number | null
+          created_at?: string
+          has_verified_email?: boolean | null
+          id?: string
+          is_premium?: boolean | null
+          is_verified?: boolean | null
+          link_karma?: number | null
+          subreddit_activity?: Json | null
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      reddit_comments: {
+        Row: {
+          author_username: string | null
+          body: string | null
+          created_at: string
+          created_utc: number | null
+          id: string
+          is_submitter: boolean | null
+          parent_id: string | null
+          post_id: string | null
+          reddit_id: string
+          score: number | null
+          subreddit: string | null
+        }
+        Insert: {
+          author_username?: string | null
+          body?: string | null
+          created_at?: string
+          created_utc?: number | null
+          id?: string
+          is_submitter?: boolean | null
+          parent_id?: string | null
+          post_id?: string | null
+          reddit_id: string
+          score?: number | null
+          subreddit?: string | null
+        }
+        Update: {
+          author_username?: string | null
+          body?: string | null
+          created_at?: string
+          created_utc?: number | null
+          id?: string
+          is_submitter?: boolean | null
+          parent_id?: string | null
+          post_id?: string | null
+          reddit_id?: string
+          score?: number | null
+          subreddit?: string | null
+        }
+        Relationships: []
+      }
+      reddit_posts: {
+        Row: {
+          author_username: string | null
+          content: string | null
+          created_at: string
+          created_utc: number | null
+          domain: string | null
+          id: string
+          is_self: boolean | null
+          num_comments: number | null
+          reddit_id: string
+          score: number | null
+          subreddit: string | null
+          title: string | null
+          upvote_ratio: number | null
+          url: string | null
+        }
+        Insert: {
+          author_username?: string | null
+          content?: string | null
+          created_at?: string
+          created_utc?: number | null
+          domain?: string | null
+          id?: string
+          is_self?: boolean | null
+          num_comments?: number | null
+          reddit_id: string
+          score?: number | null
+          subreddit?: string | null
+          title?: string | null
+          upvote_ratio?: number | null
+          url?: string | null
+        }
+        Update: {
+          author_username?: string | null
+          content?: string | null
+          created_at?: string
+          created_utc?: number | null
+          domain?: string | null
+          id?: string
+          is_self?: boolean | null
+          num_comments?: number | null
+          reddit_id?: string
+          score?: number | null
+          subreddit?: string | null
+          title?: string | null
+          upvote_ratio?: number | null
+          url?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

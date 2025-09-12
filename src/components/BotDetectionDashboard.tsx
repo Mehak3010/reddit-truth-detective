@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Shield, 
   AlertTriangle, 
@@ -15,72 +17,184 @@ import {
   TrendingUp,
   Eye,
   Target,
-  Zap
+  Zap,
+  Play,
+  RefreshCw,
+  Calendar,
+  Database
 } from "lucide-react";
 
 interface AnalysisResult {
   username: string;
-  confidence: number;
-  status: 'bot' | 'human' | 'suspicious';
-  factors: string[];
-  timestamp: string;
+  bot_probability: number;
+  confidence_score: number;
+  detection_method: string;
+  features_analyzed: Record<string, any>;
+  risk_factors: string[];
+  analysis_timestamp: string;
+}
+
+interface AnalysisSession {
+  id: string;
+  session_name: string;
+  subreddit: string;
+  status: string;
+  total_accounts_analyzed: number;
+  bots_detected: number;
+  started_at: string;
+  completed_at?: string;
+}
+
+interface DashboardStats {
+  total_accounts: number;
+  bots_detected: number;
+  accuracy_rate: number;
+  detection_rate: number;
 }
 
 export const BotDetectionDashboard = () => {
-  const [username, setUsername] = useState("");
+  const [subreddit, setSubreddit] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [results, setResults] = useState<AnalysisResult[]>([
-    {
-      username: "suspicious_user_123",
-      confidence: 94.2,
-      status: 'bot',
-      factors: ['High posting frequency', 'Generic comments', 'New account'],
-      timestamp: '2024-01-15 14:30'
-    },
-    {
-      username: "real_human_user",
-      confidence: 87.5,
-      status: 'human',
-      factors: ['Varied content', 'Established account', 'Natural patterns'],
-      timestamp: '2024-01-15 14:25'
-    }
-  ]);
+  const [currentSession, setCurrentSession] = useState<AnalysisSession | null>(null);
+  const [results, setResults] = useState<AnalysisResult[]>([]);
+  const [stats, setStats] = useState<DashboardStats>({
+    total_accounts: 0,
+    bots_detected: 0,
+    accuracy_rate: 0,
+    detection_rate: 0
+  });
+  const { toast } = useToast();
 
-  const handleAnalyze = async () => {
-    if (!username.trim()) return;
+  useEffect(() => {
+    fetchLatestResults();
+    fetchStats();
+  }, []);
+
+  const fetchLatestResults = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bot_detection_results')
+        .select('*')
+        .order('analysis_timestamp', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setResults((data || []).map(item => ({
+        username: item.username,
+        bot_probability: item.bot_probability,
+        confidence_score: item.confidence_score,
+        detection_method: item.detection_method,
+        features_analyzed: (item.features_analyzed as any) || {},
+        risk_factors: (item.risk_factors as any) || [],
+        analysis_timestamp: item.analysis_timestamp
+      })));
+    } catch (error) {
+      console.error('Error fetching results:', error);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const { data: accounts } = await supabase
+        .from('reddit_accounts')
+        .select('id', { count: 'exact' });
+
+      const { data: botResults } = await supabase
+        .from('bot_detection_results')
+        .select('bot_probability')
+        .gt('bot_probability', 0.5);
+
+      const totalAccounts = accounts?.length || 0;
+      const botsDetected = botResults?.length || 0;
+
+      setStats({
+        total_accounts: totalAccounts,
+        bots_detected: botsDetected,
+        accuracy_rate: 94.7, // This would come from model validation
+        detection_rate: totalAccounts > 0 ? (botsDetected / totalAccounts) * 100 : 0
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  const handleStartAnalysis = async () => {
+    if (!subreddit.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a subreddit name",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setIsAnalyzing(true);
-    // Simulate API call
-    setTimeout(() => {
-      const newResult: AnalysisResult = {
-        username,
-        confidence: Math.random() * 40 + 60,
-        status: Math.random() > 0.6 ? 'bot' : 'human',
-        factors: ['Analysis complete', 'Behavioral patterns detected'],
-        timestamp: new Date().toLocaleString()
-      };
-      setResults(prev => [newResult, ...prev]);
+    try {
+      // Create analysis session
+      const { data, error } = await supabase.functions.invoke('analysis-session', {
+        body: {
+          action: 'create',
+          session_name: `r/${subreddit} Analysis`,
+          subreddit: subreddit
+        }
+      });
+
+      if (error) throw error;
+      setCurrentSession(data.session);
+
+      toast({
+        title: "Analysis Started",
+        description: `Starting bot detection analysis for r/${subreddit}`,
+      });
+
+      // Run full analysis pipeline
+      const analysisResponse = await supabase.functions.invoke('analysis-session', {
+        body: {
+          action: 'run-full-analysis',
+          session_id: data.session.id
+        }
+      });
+
+      if (analysisResponse.error) throw analysisResponse.error;
+
+      toast({
+        title: "Analysis Complete",
+        description: `Found ${analysisResponse.data.detection_result.bots_detected} potential bots out of ${analysisResponse.data.detection_result.users_analyzed} users`,
+      });
+
+      // Refresh data
+      fetchLatestResults();
+      fetchStats();
+
+    } catch (error: any) {
+      console.error('Analysis error:', error);
+      toast({
+        title: "Analysis Failed",
+        description: error.message || "Failed to run analysis",
+        variant: "destructive"
+      });
+    } finally {
       setIsAnalyzing(false);
-      setUsername("");
-    }, 2000);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'bot': return 'destructive';
-      case 'human': return 'success';
-      case 'suspicious': return 'warning';
-      default: return 'secondary';
+      setCurrentSession(null);
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'bot': return <Bot className="h-4 w-4" />;
-      case 'human': return <CheckCircle className="h-4 w-4" />;
-      case 'suspicious': return <AlertTriangle className="h-4 w-4" />;
-      default: return <Shield className="h-4 w-4" />;
-    }
+  const getStatusColor = (probability: number) => {
+    if (probability > 0.7) return 'destructive';
+    if (probability > 0.5) return 'warning';
+    return 'success';
+  };
+
+  const getStatusIcon = (probability: number) => {
+    if (probability > 0.7) return <Bot className="h-4 w-4" />;
+    if (probability > 0.5) return <AlertTriangle className="h-4 w-4" />;
+    return <CheckCircle className="h-4 w-4" />;
+  };
+
+  const getStatusText = (probability: number) => {
+    if (probability > 0.7) return 'BOT';
+    if (probability > 0.5) return 'SUSPICIOUS';
+    return 'HUMAN';
   };
 
   return (
@@ -109,7 +223,7 @@ export const BotDetectionDashboard = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Accounts Analyzed</p>
-              <p className="text-2xl font-bold text-foreground">1,247</p>
+              <p className="text-2xl font-bold text-foreground">{stats.total_accounts.toLocaleString()}</p>
             </div>
           </div>
         </Card>
@@ -121,7 +235,7 @@ export const BotDetectionDashboard = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Bots Detected</p>
-              <p className="text-2xl font-bold text-destructive">342</p>
+              <p className="text-2xl font-bold text-destructive">{stats.bots_detected.toLocaleString()}</p>
             </div>
           </div>
         </Card>
@@ -133,7 +247,7 @@ export const BotDetectionDashboard = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Accuracy Rate</p>
-              <p className="text-2xl font-bold text-success">94.7%</p>
+              <p className="text-2xl font-bold text-success">{stats.accuracy_rate.toFixed(1)}%</p>
             </div>
           </div>
         </Card>
@@ -145,7 +259,7 @@ export const BotDetectionDashboard = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Detection Rate</p>
-              <p className="text-2xl font-bold text-accent">27.4%</p>
+              <p className="text-2xl font-bold text-accent">{stats.detection_rate.toFixed(1)}%</p>
             </div>
           </div>
         </Card>
@@ -156,46 +270,49 @@ export const BotDetectionDashboard = () => {
         <div className="lg:col-span-1">
           <Card className="p-6 border-border/50 bg-gradient-cyber backdrop-blur-sm">
             <div className="flex items-center gap-2 mb-6">
-              <Search className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold">Analyze User</h2>
+              <Database className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">Analyze Subreddit</h2>
             </div>
             
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  Reddit Username
+                  Subreddit Name
                 </label>
                 <Input
-                  placeholder="Enter username..."
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter subreddit (e.g., AskReddit)..."
+                  value={subreddit}
+                  onChange={(e) => setSubreddit(e.target.value)}
                   className="bg-input/50 border-border/50"
                 />
               </div>
               
               <Button 
-                onClick={handleAnalyze}
-                disabled={isAnalyzing || !username.trim()}
+                onClick={handleStartAnalysis}
+                disabled={isAnalyzing || !subreddit.trim()}
                 className="w-full bg-gradient-primary hover:shadow-cyber transition-all duration-300"
               >
                 {isAnalyzing ? (
                   <>
-                    <Zap className="h-4 w-4 mr-2 animate-spin" />
-                    Analyzing...
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Analyzing r/{subreddit}...
                   </>
                 ) : (
                   <>
-                    <Target className="h-4 w-4 mr-2" />
-                    Analyze Account
+                    <Play className="h-4 w-4 mr-2" />
+                    Start Analysis
                   </>
                 )}
               </Button>
               
-              {isAnalyzing && (
+              {isAnalyzing && currentSession && (
                 <div className="space-y-2">
                   <Progress value={65} className="h-2" />
                   <p className="text-sm text-muted-foreground text-center">
-                    Running Isolation Forest analysis...
+                    Extracting data and running bot detection...
+                  </p>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Session: {currentSession.session_name}
                   </p>
                 </div>
               )}
@@ -239,32 +356,41 @@ export const BotDetectionDashboard = () => {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1">
-                        {getStatusIcon(result.status)}
+                        {getStatusIcon(result.bot_probability)}
                         <span className="font-mono text-sm">u/{result.username}</span>
                       </div>
                       <Badge 
-                        variant={getStatusColor(result.status) as any}
+                        variant={getStatusColor(result.bot_probability) as any}
                         className="text-xs"
                       >
-                        {result.status.toUpperCase()}
+                        {getStatusText(result.bot_probability)}
                       </Badge>
                     </div>
-                    <span className="text-xs text-muted-foreground">{result.timestamp}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(result.analysis_timestamp).toLocaleString()}
+                    </span>
                   </div>
                   
                   <div className="mb-3">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-muted-foreground">Confidence</span>
-                      <span className="text-sm font-semibold">{result.confidence.toFixed(1)}%</span>
+                      <span className="text-sm text-muted-foreground">Bot Probability</span>
+                      <span className="text-sm font-semibold">{(result.bot_probability * 100).toFixed(1)}%</span>
                     </div>
                     <Progress 
-                      value={result.confidence} 
+                      value={result.bot_probability * 100} 
                       className="h-2"
                     />
                   </div>
                   
+                  <div className="mb-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">Confidence</span>
+                      <span className="text-xs font-medium">{(result.confidence_score * 100).toFixed(1)}%</span>
+                    </div>
+                  </div>
+                  
                   <div className="flex flex-wrap gap-1">
-                    {result.factors.map((factor, i) => (
+                    {result.risk_factors.map((factor, i) => (
                       <Badge key={i} variant="outline" className="text-xs">
                         {factor}
                       </Badge>

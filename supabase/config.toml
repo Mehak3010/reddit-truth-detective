@@ -1,1 +1,10 @@
 project_id = "hffvjhorttfkhzpkwgnv"
+
+[functions.reddit-extract]
+verify_jwt = false
+
+[functions.bot-detection]
+verify_jwt = false
+
+[functions.analysis-session]
+verify_jwt = false
