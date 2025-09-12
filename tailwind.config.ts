@@ -22,6 +22,7 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          glow: "hsl(var(--primary-glow))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -30,6 +31,14 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -57,6 +66,21 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      backgroundImage: {
+        'gradient-primary': 'var(--gradient-primary)',
+        'gradient-cyber': 'var(--gradient-cyber)',
+        'gradient-threat': 'var(--gradient-threat)',
+        'gradient-success': 'var(--gradient-success)',
+      },
+      boxShadow: {
+        'cyber': 'var(--shadow-cyber)',
+        'glow': 'var(--shadow-glow)',
+        'threat': 'var(--shadow-threat)',
+        'success': 'var(--shadow-success)',
+      },
+      transitionProperty: {
+        'cyber': 'var(--transition-cyber)',
       },
       borderRadius: {
         lg: "var(--radius)",
