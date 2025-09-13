@@ -57,8 +57,11 @@ Deno.serve(async (req) => {
     const clientId = Deno.env.get('REDDIT_CLIENT_ID');
     const clientSecret = Deno.env.get('REDDIT_CLIENT_SECRET');
     
+    console.log(`Reddit Client ID configured: ${clientId ? 'Yes' : 'No'}`);
+    console.log(`Reddit Client Secret configured: ${clientSecret ? 'Yes' : 'No'}`);
+    
     if (!clientId || !clientSecret) {
-      throw new Error('Reddit API credentials not configured');
+      throw new Error('Reddit API credentials not configured. Please ensure REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET are set.');
     }
 
     const auth = btoa(`${clientId}:${clientSecret}`);
@@ -66,14 +69,16 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,
-        'User-Agent': 'BotDetectionApp/1.0',
+        'User-Agent': 'BotDetectionApp/1.0 by /u/botdetection',
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: 'grant_type=client_credentials'
     });
 
     if (!tokenResponse.ok) {
-      throw new Error(`Failed to get Reddit token: ${tokenResponse.statusText}`);
+      const errorText = await tokenResponse.text();
+      console.error(`Reddit token request failed. Status: ${tokenResponse.status}, Response: ${errorText}`);
+      throw new Error(`Failed to get Reddit token: ${tokenResponse.status} ${tokenResponse.statusText} - ${errorText}`);
     }
 
     const tokenData: RedditTokenResponse = await tokenResponse.json();
