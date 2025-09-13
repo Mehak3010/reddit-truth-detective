@@ -64,12 +64,18 @@ Deno.serve(async (req) => {
       throw new Error('Reddit API credentials not configured. Please ensure REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET are set.');
     }
 
+    // Encode credentials for Basic auth
     const auth = btoa(`${clientId}:${clientSecret}`);
+    
+    console.log('Attempting Reddit API authentication...');
+    console.log('Client ID (first 10 chars):', clientId?.substring(0, 10));
+    console.log('Client Secret (first 10 chars):', clientSecret?.substring(0, 10));
+    
     const tokenResponse = await fetch('https://www.reddit.com/api/v1/access_token', {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,
-        'User-Agent': 'BotDetectionApp/1.0 by /u/botdetection',
+        'User-Agent': 'MyBotDetectionProject:v1.0.0 (by /u/botdetection)',
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: 'grant_type=client_credentials'
@@ -96,7 +102,7 @@ Deno.serve(async (req) => {
     const postsResponse = await fetch(`https://oauth.reddit.com/r/${subreddit}/hot?limit=${limit}`, {
       headers: {
         'Authorization': `Bearer ${tokenData.access_token}`,
-        'User-Agent': 'BotDetectionApp/1.0',
+        'User-Agent': 'MyBotDetectionProject:v1.0.0 (by /u/botdetection)',
       }
     });
 
@@ -152,7 +158,7 @@ Deno.serve(async (req) => {
         const userResponse = await fetch(`https://oauth.reddit.com/user/${username}/about`, {
           headers: {
             'Authorization': `Bearer ${tokenData.access_token}`,
-            'User-Agent': 'BotDetectionApp/1.0',
+            'User-Agent': 'MyBotDetectionProject:v1.0.0 (by /u/botdetection)',
           }
         });
 
