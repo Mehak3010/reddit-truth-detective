@@ -53,32 +53,37 @@ Deno.serve(async (req) => {
     
     console.log(`Starting Reddit extraction for subreddit: ${subreddit}, limit: ${limit}`);
 
-    // Get Reddit OAuth token
+    // Get Reddit OAuth token using script authentication
     const clientId = Deno.env.get('REDDIT_CLIENT_ID');
     const clientSecret = Deno.env.get('REDDIT_CLIENT_SECRET');
+    const username = Deno.env.get('REDDIT_USERNAME');
+    const password = Deno.env.get('REDDIT_PASSWORD');
     
     console.log(`Reddit Client ID configured: ${clientId ? 'Yes' : 'No'}`);
     console.log(`Reddit Client Secret configured: ${clientSecret ? 'Yes' : 'No'}`);
+    console.log(`Reddit Username configured: ${username ? 'Yes' : 'No'}`);
+    console.log(`Reddit Password configured: ${password ? 'Yes' : 'No'}`);
     
-    if (!clientId || !clientSecret) {
-      throw new Error('Reddit API credentials not configured. Please ensure REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET are set.');
+    if (!clientId || !clientSecret || !username || !password) {
+      throw new Error('Reddit API credentials not configured. Please ensure REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USERNAME, and REDDIT_PASSWORD are set.');
     }
 
     // Encode credentials for Basic auth
     const auth = btoa(`${clientId}:${clientSecret}`);
     
-    console.log('Attempting Reddit API authentication...');
+    console.log('Attempting Reddit API authentication with script app...');
     console.log('Client ID (first 10 chars):', clientId?.substring(0, 10));
     console.log('Client Secret (first 10 chars):', clientSecret?.substring(0, 10));
+    console.log('Username:', username);
     
     const tokenResponse = await fetch('https://www.reddit.com/api/v1/access_token', {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,
-        'User-Agent': 'MyBotDetectionProject:v1.0.0 (by /u/botdetection)',
+        'User-Agent': 'Bot Detection Project created by /u/Return_Foo_Bar version: 0.1',
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: 'grant_type=client_credentials'
+      body: `grant_type=password&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
     });
 
     if (!tokenResponse.ok) {
@@ -102,7 +107,7 @@ Deno.serve(async (req) => {
     const postsResponse = await fetch(`https://oauth.reddit.com/r/${subreddit}/hot?limit=${limit}`, {
       headers: {
         'Authorization': `Bearer ${tokenData.access_token}`,
-        'User-Agent': 'MyBotDetectionProject:v1.0.0 (by /u/botdetection)',
+        'User-Agent': 'Bot Detection Project created by /u/Return_Foo_Bar version: 0.1',
       }
     });
 
@@ -158,7 +163,7 @@ Deno.serve(async (req) => {
         const userResponse = await fetch(`https://oauth.reddit.com/user/${username}/about`, {
           headers: {
             'Authorization': `Bearer ${tokenData.access_token}`,
-            'User-Agent': 'MyBotDetectionProject:v1.0.0 (by /u/botdetection)',
+            'User-Agent': 'Bot Detection Project created by /u/Return_Foo_Bar version: 0.1',
           }
         });
 
